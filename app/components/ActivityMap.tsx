@@ -1,20 +1,62 @@
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import type { CircleMarker, Map } from "leaflet";
+import type * as L from "leaflet";
 
 interface Props {
   coords: [number, number][];
 }
 
-export default function ActivityMap({ coords }: Props) {
+export interface ActivityMapHandle {
+  setHoverCoord: (coord: [number, number] | null) => void;
+}
+
+const ActivityMap = forwardRef<ActivityMapHandle, Props>(function ActivityMap({ coords }, ref) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<Map | null>(null);
+  const hoverMarkerRef = useRef<CircleMarker | null>(null);
+  const leafletRef = useRef<typeof L | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    setHoverCoord(coord) {
+      const map = mapInstanceRef.current;
+      const L = leafletRef.current;
+      if (!map || !L) return;
+
+      if (coord) {
+        if (hoverMarkerRef.current) {
+          hoverMarkerRef.current.setLatLng(coord);
+        } else {
+          hoverMarkerRef.current = L.circleMarker(coord, {
+            radius: 7,
+            color: "#fff",
+            fillColor: "#f97316",
+            fillOpacity: 1,
+            weight: 2,
+          }).addTo(map);
+        }
+      } else {
+        if (hoverMarkerRef.current) {
+          hoverMarkerRef.current.remove();
+          hoverMarkerRef.current = null;
+        }
+      }
+    },
+  }));
 
   useEffect(() => {
     if (!mapRef.current || coords.length === 0) return;
 
-    // Dynamically import Leaflet to avoid SSR issues
-    import("leaflet").then((L) => {
-      import("leaflet/dist/leaflet.css");
+    let cancelled = false;
+    let mapInstance: Map | null = null;
 
-      const map = L.map(mapRef.current!).setView(coords[0], 13);
+    import("leaflet").then((L) => {
+      if (cancelled || !mapRef.current) return;
+      import("leaflet/dist/leaflet.css");
+      leafletRef.current = L;
+
+      const map = L.map(mapRef.current).setView(coords[0], 13);
+      mapInstance = map;
+      mapInstanceRef.current = map;
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
@@ -23,15 +65,22 @@ export default function ActivityMap({ coords }: Props) {
       const polyline = L.polyline(coords, { color: "#f97316", weight: 3 }).addTo(map);
       map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
 
-      // Start and end markers
       L.circleMarker(coords[0], { radius: 6, color: "#16a34a", fillColor: "#16a34a", fillOpacity: 1 }).addTo(map);
       L.circleMarker(coords[coords.length - 1], { radius: 6, color: "#dc2626", fillColor: "#dc2626", fillOpacity: 1 }).addTo(map);
-
-      return () => {
-        map.remove();
-      };
     });
+
+    return () => {
+      cancelled = true;
+      if (mapInstance) {
+        mapInstance.remove();
+        mapInstanceRef.current = null;
+        hoverMarkerRef.current = null;
+        leafletRef.current = null;
+      }
+    };
   }, [coords]);
 
   return <div ref={mapRef} style={{ height: "400px", width: "100%" }} className="rounded-lg z-0" />;
-}
+});
+
+export default ActivityMap;

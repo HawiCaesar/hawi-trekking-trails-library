@@ -1,10 +1,12 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import { Form, Link, useActionData, useLoaderData } from "react-router";
+import type { ActivityMapHandle } from "~/components/ActivityMap";
 import { db } from "~/lib/db.server";
 import { requireAuth } from "~/lib/session.server";
 import type { Route } from "./+types/activities.$id";
 
 const ActivityMap = lazy(() => import("~/components/ActivityMap"));
+const ElevationChart = lazy(() => import("~/components/ElevationChart"));
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   await requireAuth(request);
@@ -63,9 +65,11 @@ export default function ActivityDetail() {
   const { activity } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const [editing, setEditing] = useState(false);
+  const mapRef = useRef<ActivityMapHandle>(null);
 
   const gps = activity.gpsData as any;
   const coords: [number, number][] = gps?.latlng?.data ?? [];
+  const altitude: number[] = gps?.altitude?.data ?? [];
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -99,12 +103,22 @@ export default function ActivityDetail() {
       {coords.length > 0 ? (
         <div className="mb-6">
           <Suspense fallback={<div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">Loading map...</div>}>
-            <ActivityMap coords={coords} />
+            <ActivityMap ref={mapRef} coords={coords} />
           </Suspense>
         </div>
       ) : (
         <div className="mb-6 h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm">
           No GPS data available
+        </div>
+      )}
+
+      {/* Elevation Chart */}
+      {altitude.length > 0 && (
+        <div className="mb-6 bg-gray-50 rounded-lg p-4">
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Elevation Profile</p>
+          <Suspense fallback={<div className="h-44 flex items-center justify-center text-gray-400 text-sm">Loading chart...</div>}>
+            <ElevationChart altitude={altitude} totalDistanceKm={activity.distance / 1000} onHoverIndex={(i) => mapRef.current?.setHoverCoord(i != null ? coords[i] ?? null : null)} />
+          </Suspense>
         </div>
       )}
 

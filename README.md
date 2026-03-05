@@ -1,87 +1,53 @@
-# Welcome to React Router!
+# Trails Archive
 
-A modern, production-ready template for building full-stack React applications using React Router.
+A personal library of hikes I've done — connected to Strava, with GPS maps and trail notes.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## Screenshots
 
-## Features
+![Hike list](hike-list.png)
+![Hike detail](hike-detail.png)
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+## What it does
 
-## Getting Started
+- Pulls hiking activities from Strava and saves it to my own database.
+- Shows each hike with distance, time, elevation gain, and a GPS route map
+- Lets you add your own notes: difficulty, trail conditions, weather, gear, companions, and a rating
 
-### Installation
+## Stack
 
-Install the dependencies:
+- React Router v7 (full-stack, SSR)
+- Prisma 7 + PostgreSQL
+- Leaflet for GPS maps
+- Tailwind CSS
+- Deployed on Railway
 
-```bash
-npm install
-```
+## Running locally
 
-### Development
+1. Clone the repo and install dependencies:
+   ```bash
+   npm install
+   ```
 
-Start the development server with HMR:
+2. Copy `.env.example` to `.env` and fill in your values:
+   ```
+   DATABASE_URL=postgresql://user:password@localhost:5432/trails
+   SESSION_SECRET=your-secret
+   STRAVA_CLIENT_ID=your-client-id
+   STRAVA_CLIENT_SECRET=your-client-secret
+   ```
 
-```bash
-npm run dev
-```
+3. Run the database migration:
+   ```bash
+   npx prisma migrate dev
+   ```
 
-Your application will be available at `http://localhost:5173`.
+4. Start the dev server:
+   ```bash
+   npm run dev
+   ```
 
-## Building for Production
+## Strava setup
 
-Create a production build:
-
-```bash
-npm run build
-```
-
-## Deployment
-
-### Docker Deployment
-
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+- Create an app at [strava.com/settings/api](https://www.strava.com/settings/api)
+- Set the Authorization Callback Domain to `localhost` for local dev or your Railway domain for production
+- Copy the Client ID and Client Secret into your `.env`

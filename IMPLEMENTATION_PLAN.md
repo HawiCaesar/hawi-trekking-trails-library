@@ -421,6 +421,26 @@ Only tackle these after Phase 6 is fully working.
 - **Token expiry**: Access tokens expire in 6 hours. Always check `expires_at` and refresh before API calls.
 - **GPS data size**: `latlng` streams for long hikes can be large. Store as JSON in Postgres — no need to normalize.
 
+### Railway + Prisma 7 Deployment (Phase 6 lessons)
+
+- **Prisma 7 removes `url` from `schema.prisma`**: The datasource URL is now configured only in `prisma.config.ts`. Do not add `url = env("DATABASE_URL")` to the schema — Prisma 7 will throw an error.
+- **`prisma.config.ts` relies on `process.env`**: The config file reads `DATABASE_URL` at runtime. This works fine in Railway's runtime environment but NOT at build time, since Railway does not inject service variables into the build phase by default.
+- **Do not run `prisma migrate deploy` in the build or start script**: Prisma 7 cannot reliably find `prisma.config.ts` or the schema during Railway's build/runtime lifecycle. The `--schema` flag is also unreliable in Prisma 7.
+- **Best approach for Railway: run migrations manually once from local machine**:
+  ```bash
+  # Use the public external URL from Railway's Postgres service (not the internal one)
+  DATABASE_URL="postgresql://postgres:...@roundhouse.proxy.rlwy.net:PORT/railway" npx prisma migrate deploy
+  ```
+  - Railway exposes two URLs: `DATABASE_URL` (internal, only reachable within Railway network) and `DATABASE_PUBLIC_URL` (external, reachable from anywhere). Use the public one locally.
+  - After running this once, the schema is applied. Future schema changes should be migrated the same way.
+- **Keep build and start scripts simple**:
+  ```json
+  "build": "prisma generate && react-router build",
+  "start": "react-router-serve ./build/server/index.js"
+  ```
+- **Strava `client_id` in `.env`**: Must not be wrapped in quotes. Use `STRAVA_CLIENT_ID=202148`, not `STRAVA_CLIENT_ID="202148"`.
+- **Chrome DevTools `.well-known` probe errors**: Add a catch-all route `route(".well-known/*", "routes/well-known.ts")` returning a 200 to suppress the terminal noise.
+
 ---
 
 ## File Structure (Target)

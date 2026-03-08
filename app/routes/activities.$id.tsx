@@ -126,14 +126,18 @@ export default function ActivityDetail() {
       <div className="bg-gray-50 rounded-lg p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-gray-800">Trail Notes</h2>
-          {!editing && (
+          {/**
+           * Commenting this out so that I can add some proper auth and permissions later without worrying about the UI. 
+           * For now, just show the notes but hide the edit button since there's no real user accounts or ownership yet.
+           */}
+          {/* {!editing && (
             <button
               onClick={() => setEditing(true)}
               className="text-sm text-orange-500 hover:text-orange-600 font-medium"
             >
               {activity.notes || activity.difficulty || activity.rating ? "Edit" : "+ Add notes"}
             </button>
-          )}
+          )} */}
         </div>
 
         {editing ? (

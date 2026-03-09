@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { Form, redirect, useActionData, useNavigation } from "react-router";
+import { Form, Link, redirect, useActionData, useNavigation } from "react-router";
 import { commitSession, getIsOwner, getSession } from "~/lib/session.server";
 import type { Route } from "./+types/login";
 
@@ -56,6 +56,10 @@ export default function Login() {
             {isSubmitting ? "Signing in…" : "Sign in"}
           </button>
         </Form>
+
+        <Link to="/activities" className="text-sm text-gray-400 hover:text-gray-600 block mt-4">
+          ← Back to hikes
+        </Link>
       </div>
     </div>
   );

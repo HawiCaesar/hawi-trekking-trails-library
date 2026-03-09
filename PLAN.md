@@ -222,6 +222,15 @@ Full-stack hiking trail tracker with Strava integration. Track completed hikes w
 - [ ] Route prefetching
 - [ ] Image optimization
 
+### 7.4 Public / Owner Access Model
+- [ ] Make hike list and detail pages publicly accessible (no login required)
+- [ ] Restrict Strava import and note editing to the owner only
+- [ ] Login page auto-redirects to Strava OAuth (no button needed for a single-user app)
+- [ ] Home route redirects to `/activities` instead of `/login`
+- [ ] Add `OWNER_STRAVA_ID` env var to identify the single owner
+- [ ] Pass `isOwner` flag from loaders to conditionally render edit UI and import controls
+- [ ] Re-enable the edit button on activity detail (was commented out pending proper auth)
+
 **Deliverable**: Production-ready portfolio project
 
 ---

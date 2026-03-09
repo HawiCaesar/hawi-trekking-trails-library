@@ -397,6 +397,294 @@ Each phase has a clear goal, specific commands/files to create, and a verificati
 
 ---
 
+## Phase 8: Public / Owner Access Model
+
+**Goal**: Hike list and details are publicly visible to anyone. The owner (Brian) logs in at `/login` with a private password to unlock editing and Strava import. Strava tokens are persisted in the database so the owner only needs to connect Strava once — ever.
+
+### Context
+
+Currently all routes call `requireAuth()` which gates everything behind Strava OAuth. The new model separates two concerns:
+- **Identity** (am I the owner?): password-based, session flag `isOwner: true`
+- **Strava access** (can I import?): tokens stored in a `Settings` DB row, refreshed automatically
+
+This means the owner logs in with a password once per browser session. Strava tokens are never lost on logout.
+
+---
+
+### Steps
+
+#### 1. Add `Settings` model to `prisma/schema.prisma`
+
+Single-row table enforced by `@default(1)` on the primary key.
+
+```prisma
+model Settings {
+  id                 Int      @id @default(1)
+  stravaAccessToken  String?
+  stravaRefreshToken String?
+  stravaExpiresAt    Int?
+  updatedAt          DateTime @updatedAt
+}
+```
+
+Run migration locally and against Railway (same manual approach as Phase 6):
+```bash
+npx prisma migrate dev --name add-settings
+DATABASE_URL="<railway_public_url>" npx prisma migrate deploy
+```
+
+---
+
+#### 2. Add `ADMIN_PASSWORD` to environment
+
+In `.env` and Railway dashboard:
+```
+ADMIN_PASSWORD=<your_private_password>
+```
+
+---
+
+#### 3. Update `app/lib/session.server.ts`
+
+Replace `requireAuth` with two new helpers. Keep `getSession`, `commitSession`, `destroySession` unchanged.
+
+```ts
+export async function getIsOwner(request: Request): Promise<boolean> {
+  const session = await getSession(request);
+  return session.get("isOwner") === true;
+}
+
+export async function requireOwner(request: Request): Promise<void> {
+  const isOwner = await getIsOwner(request);
+  if (!isOwner) throw new Response("Forbidden", { status: 403 });
+}
+```
+
+---
+
+#### 4. Update `app/routes/login.tsx` — password form
+
+Replace the Strava button with a password form. If already owner, redirect immediately.
+
+```ts
+export async function loader({ request }: Route.LoaderArgs) {
+  const isOwner = await getIsOwner(request);
+  if (isOwner) return redirect("/activities");
+  return {};
+}
+
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+  const password = formData.get("password") as string;
+
+  if (password !== process.env.ADMIN_PASSWORD) {
+    return { error: "Incorrect password" };
+  }
+
+  const session = await getSession(request);
+  session.set("isOwner", true);
+  return redirect("/activities", {
+    headers: { "Set-Cookie": await commitSession(session) },
+  });
+}
+```
+
+---
+
+#### 5. Update `app/routes/auth.callback.ts` — save tokens to DB, preserve `isOwner`
+
+After exchanging the Strava code, upsert tokens into the `Settings` table. Read the existing session first so `isOwner` is preserved.
+
+```ts
+// After successful token exchange:
+await db.settings.upsert({
+  where: { id: 1 },
+  create: {
+    id: 1,
+    stravaAccessToken: data.access_token,
+    stravaRefreshToken: data.refresh_token,
+    stravaExpiresAt: data.expires_at,
+  },
+  update: {
+    stravaAccessToken: data.access_token,
+    stravaRefreshToken: data.refresh_token,
+    stravaExpiresAt: data.expires_at,
+  },
+});
+
+// Preserve existing session (isOwner stays intact)
+const session = await getSession(request);
+// No longer need to store tokens in session
+return redirect("/activities", {
+  headers: { "Set-Cookie": await commitSession(session) },
+});
+```
+
+---
+
+#### 6. Add `getValidStravaToken()` to `app/services/strava.server.ts`
+
+Reads token from DB, refreshes if within 5 minutes of expiry, writes back.
+
+```ts
+export async function getValidStravaToken(): Promise<string> {
+  const settings = await db.settings.findUnique({ where: { id: 1 } });
+  if (!settings?.stravaAccessToken || !settings.stravaRefreshToken) {
+    throw new Error("No Strava token stored — connect Strava first");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (settings.stravaExpiresAt && settings.stravaExpiresAt > now + 300) {
+    return settings.stravaAccessToken;
+  }
+
+  // Token expired — refresh it
+  const res = await fetch("https://www.strava.com/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_id: process.env.STRAVA_CLIENT_ID,
+      client_secret: process.env.STRAVA_CLIENT_SECRET,
+      grant_type: "refresh_token",
+      refresh_token: settings.stravaRefreshToken,
+    }),
+  });
+  const data = await res.json();
+
+  await db.settings.update({
+    where: { id: 1 },
+    data: {
+      stravaAccessToken: data.access_token,
+      stravaRefreshToken: data.refresh_token,
+      stravaExpiresAt: data.expires_at,
+    },
+  });
+
+  return data.access_token;
+}
+```
+
+---
+
+#### 7. Update `app/routes/home.tsx` — redirect to `/activities`
+
+```ts
+export async function loader() {
+  return redirect("/activities");
+}
+```
+
+---
+
+#### 8. Update `app/routes/activities._index.tsx` — public view, owner-only import
+
+**Loader**: Remove `requireAuth`. Show imported hikes to everyone. Owner gets the full import UI.
+
+```ts
+export async function loader({ request }: Route.LoaderArgs) {
+  const isOwner = await getIsOwner(request);
+
+  const imported = await db.activity.findMany({
+    select: { id: true, stravaId: true, name: true, distance: true, movingTime: true, totalElevGain: true, startDate: true },
+    orderBy: { startDate: "desc" },
+  });
+
+  if (!isOwner) {
+    return { imported, stravaActivities: [], importedMap: {}, isOwner: false, stravaConnected: false };
+  }
+
+  // Check if Strava is connected (token exists in DB)
+  const settings = await db.settings.findUnique({ where: { id: 1 } });
+  if (!settings?.stravaAccessToken) {
+    return { imported, stravaActivities: [], importedMap: {}, isOwner: true, stravaConnected: false };
+  }
+
+  const token = await getValidStravaToken();
+  const stravaActivities = await getAthleteActivities(token);
+  const importedMap = Object.fromEntries(imported.map((a) => [a.stravaId, a.id]));
+
+  return { imported, stravaActivities, importedMap, isOwner: true, stravaConnected: true };
+}
+```
+
+**Action**: Replace `requireAuth` with `requireOwner`. Get token from `getValidStravaToken()` instead of session.
+
+```ts
+export async function action({ request }: Route.ActionArgs) {
+  await requireOwner(request);
+  const token = await getValidStravaToken();
+  // ... rest unchanged
+}
+```
+
+**UI**:
+- Always show the imported hike list (rename from `stravaActivities` list to show `imported`)
+- When `isOwner && !stravaConnected`: show "Connect Strava" link → `/auth/strava`
+- When `isOwner && stravaConnected`: show full Strava list with Import buttons
+
+> **Note**: The current UI only shows the Strava list. It needs to be updated to also show the locally imported list for public visitors. This is a UI restructure — public sees imported hikes as cards with a "View" link, owner additionally sees unimported Strava activities.
+
+---
+
+#### 9. Update `app/routes/activities.$id.tsx` — public view, owner-only edit
+
+**Loader**: Remove `requireAuth`. Pass `isOwner`.
+
+```ts
+export async function loader({ request, params }: Route.LoaderArgs) {
+  const isOwner = await getIsOwner(request);
+  const activity = await db.activity.findUnique({ where: { id: params.id } });
+  if (!activity) throw new Response("Not Found", { status: 404 });
+  return { activity, isOwner };
+}
+```
+
+**Action**: Replace `requireAuth` → `requireOwner`.
+
+**UI**: Re-enable the edit button, guarded by `isOwner`. Remove the comment block.
+
+```tsx
+{isOwner && !editing && (
+  <button onClick={() => setEditing(true)} className="text-sm text-orange-500 hover:text-orange-600 font-medium">
+    {activity.notes || activity.difficulty || activity.rating ? "Edit" : "+ Add notes"}
+  </button>
+)}
+```
+
+---
+
+### Files Modified
+
+| File | Change |
+|---|---|
+| `prisma/schema.prisma` | Add `Settings` model |
+| `app/lib/session.server.ts` | Replace `requireAuth` with `getIsOwner()` + `requireOwner()` |
+| `app/routes/login.tsx` | Replace Strava button with password form; loader + action |
+| `app/routes/auth.callback.ts` | Save tokens to `Settings` DB table; preserve `isOwner` from existing session |
+| `app/services/strava.server.ts` | Add `getValidStravaToken()` — reads/refreshes from DB |
+| `app/routes/home.tsx` | Redirect to `/activities` |
+| `app/routes/activities._index.tsx` | Public loader with `isOwner`/`stravaConnected`; token from DB; UI restructure |
+| `app/routes/activities.$id.tsx` | Public loader with `isOwner`; `requireOwner` on action; re-enable edit button |
+| `.env` + Railway dashboard | Add `ADMIN_PASSWORD` |
+
+---
+
+### Verify Phase 8
+
+- [ ] Visiting `/activities` without logging in shows the imported hike list (read-only)
+- [ ] Visiting `/activities/:id` without logging in shows hike detail + map (no edit button)
+- [ ] `/login` shows a password form; wrong password shows an error message
+- [ ] Correct password sets `isOwner` in session, redirects to `/activities`
+- [ ] Owner with no Strava connection sees "Connect Strava" prompt on the list page
+- [ ] Clicking "Connect Strava" completes OAuth; tokens saved to DB
+- [ ] Owner now sees the Strava import list with Import buttons
+- [ ] Logging out and back in with password still shows the import list (tokens persist in DB)
+- [ ] Token auto-refreshes without any manual action
+- [ ] Owner sees edit button on activity detail pages
+- [ ] POSTing to actions without owner session returns 403
+
+---
+
 ## Phase 7: Polish (Post-MVP)
 
 Only tackle these after Phase 6 is fully working.

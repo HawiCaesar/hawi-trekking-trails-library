@@ -1,28 +1,39 @@
 import { Form, Link, useLoaderData, useNavigation } from "react-router";
 import { db } from "~/lib/db.server";
-import { commitSession, requireAuth } from "~/lib/session.server";
-import { getActivityById, getActivityStreams, getAthleteActivities } from "~/services/strava.server";
+import { commitSession, getIsOwner, getSession, requireOwner } from "~/lib/session.server";
+import { getActivityById, getActivityStreams, getAthleteActivities, getValidStravaToken } from "~/services/strava.server";
 import type { Route } from "./+types/activities._index";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const session = await requireAuth(request);
-  const token = session.get("accessToken") as string;
+  const isOwner = await getIsOwner(request);
 
-  const [stravaActivities, importedActivities] = await Promise.all([
-    getAthleteActivities(token),
-    db.activity.findMany({ select: { id: true, stravaId: true }, orderBy: { startDate: "desc" } }),
-  ]);
+  const imported = await db.activity.findMany({
+    select: { id: true, stravaId: true, name: true, distance: true, movingTime: true, totalElevGain: true, startDate: true },
+    orderBy: { startDate: "desc" },
+  });
 
-  const importedMap = new Map(
-    importedActivities.map((a: { id: string; stravaId: string }) => [a.stravaId, a.id])
-  );
+  if (!isOwner) {
+    return { imported, stravaActivities: [], importedMap: {}, isOwner: false, stravaConnected: false };
+  }
 
-  return { stravaActivities, importedMap: Object.fromEntries(importedMap) };
+  // Check if Strava is connected
+  const settings = await db.settings.findUnique({ where: { id: 1 } });
+  if (!settings?.stravaAccessToken) {
+    return { imported, stravaActivities: [], importedMap: {}, isOwner: true, stravaConnected: false };
+  }
+
+  const token = await getValidStravaToken();
+  const stravaActivities = await getAthleteActivities(token);
+  const importedMap = Object.fromEntries(imported.map((a) => [a.stravaId, a.id]));
+
+  return { imported, stravaActivities, importedMap, isOwner: true, stravaConnected: true };
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  const session = await requireAuth(request);
-  const token = session.get("accessToken") as string;
+  await requireOwner(request);
+
+  const session = await getSession(request);
+  const token = await getValidStravaToken();
 
   const formData = await request.formData();
   const stravaId = formData.get("stravaId") as string;
@@ -68,57 +79,112 @@ function formatDuration(seconds: number) {
 }
 
 export default function ActivitiesIndex() {
-  const { stravaActivities, importedMap } = useLoaderData<typeof loader>();
+  const { imported, stravaActivities, importedMap, isOwner, stravaConnected } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const importingId = navigation.formData?.get("stravaId");
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">My Hikes</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Hawi's Hikes</h1>
+        {isOwner ? (
+          <Form method="post" action="/logout">
+            <button type="submit" className="text-sm text-gray-400 hover:text-gray-600">
+              Sign out
+            </button>
+          </Form>
+        ) : (
+          <Link to="/login" className="text-sm text-gray-400 hover:text-gray-600">
+            Owner login
+          </Link>
+        )}
+      </div>
 
-      <div className="space-y-3">
-        {stravaActivities.map((activity: any) => {
-          const dbId = importedMap[String(activity.id)];
-          const isImported = !!dbId;
-          const isImporting = importingId === String(activity.id);
+      {/* Owner: Strava import section */}
+      {isOwner && (
+        <div className="mb-8">
+          {!stravaConnected ? (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center justify-between">
+              <p className="text-sm text-orange-700">Connect Strava to import new hikes.</p>
+              <a
+                href="/auth/strava"
+                className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded transition-colors"
+              >
+                Connect Strava
+              </a>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Import from Strava</h2>
+              <div className="space-y-2">
+                {stravaActivities
+                  .filter((a: any) => !importedMap[String(a.id)])
+                  .map((activity: any) => {
+                    const isImporting = importingId === String(activity.id);
+                    return (
+                      <div
+                        key={activity.id}
+                        className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4"
+                      >
+                        <div>
+                          <p className="font-medium text-gray-900">{activity.name}</p>
+                          <p className="text-sm text-gray-500">
+                            {new Date(activity.start_date).toLocaleDateString()} ·{" "}
+                            {formatDistance(activity.distance)} ·{" "}
+                            {formatDuration(activity.moving_time)} ·{" "}
+                            {activity.total_elevation_gain}m gain
+                          </p>
+                        </div>
+                        <Form method="post" className="ml-4 flex-shrink-0">
+                          <input type="hidden" name="stravaId" value={activity.id} />
+                          <button
+                            type="submit"
+                            disabled={!!isImporting}
+                            className="text-sm bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-3 py-1.5 rounded transition-colors"
+                          >
+                            {isImporting ? "Importing..." : "Import"}
+                          </button>
+                        </Form>
+                      </div>
+                    );
+                  })}
+                {stravaActivities.filter((a: any) => !importedMap[String(a.id)]).length === 0 && (
+                  <p className="text-sm text-gray-400 italic">All Strava activities are imported.</p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
-          return (
-            <div
+      {/* Imported hikes — visible to everyone */}
+      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+        {isOwner ? "Imported Hikes" : "Hikes"}
+      </h2>
+      {imported.length === 0 ? (
+        <p className="text-sm text-gray-400 italic">No hikes yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {imported.map((activity) => (
+            <Link
               key={activity.id}
-              className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4"
+              to={`/activities/${activity.id}`}
+              className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 hover:border-orange-300 transition-colors"
             >
               <div>
                 <p className="font-medium text-gray-900">{activity.name}</p>
                 <p className="text-sm text-gray-500">
-                  {new Date(activity.start_date).toLocaleDateString()} ·{" "}
+                  {new Date(activity.startDate).toLocaleDateString()} ·{" "}
                   {formatDistance(activity.distance)} ·{" "}
-                  {formatDuration(activity.moving_time)} ·{" "}
-                  {activity.total_elevation_gain}m gain
+                  {formatDuration(activity.movingTime)} ·{" "}
+                  {activity.totalElevGain}m gain
                 </p>
               </div>
-
-              <div className="ml-4 flex-shrink-0">
-                {isImported ? (
-                  <Link to={`/activities/${dbId}`} className="text-sm text-green-600 font-medium hover:underline">
-                    View →
-                  </Link>
-                ) : (
-                  <Form method="post">
-                    <input type="hidden" name="stravaId" value={activity.id} />
-                    <button
-                      type="submit"
-                      disabled={!!isImporting}
-                      className="text-sm bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-3 py-1.5 rounded transition-colors"
-                    >
-                      {isImporting ? "Importing..." : "Import"}
-                    </button>
-                  </Form>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              <span className="ml-4 text-sm text-orange-500 font-medium flex-shrink-0">View →</span>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { createCookieSessionStorage, redirect } from "react-router";
+import { createCookieSessionStorage } from "react-router";
 
 const sessionStorage = createCookieSessionStorage({
   cookie: {
@@ -17,10 +17,12 @@ export async function getSession(request: Request) {
 
 export const { commitSession, destroySession } = sessionStorage;
 
-export async function requireAuth(request: Request) {
+export async function getIsOwner(request: Request): Promise<boolean> {
   const session = await getSession(request);
-  if (!session.get("accessToken")) {
-    throw redirect("/login");
-  }
-  return session;
+  return session.get("isOwner") === true;
+}
+
+export async function requireOwner(request: Request): Promise<void> {
+  const isOwner = await getIsOwner(request);
+  if (!isOwner) throw new Response("Forbidden", { status: 403 });
 }

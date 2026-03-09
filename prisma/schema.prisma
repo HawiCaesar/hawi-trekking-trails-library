@@ -13,6 +13,14 @@ datasource db {
   provider = "postgresql"
 }
 
+model Settings {
+  id                 Int      @id @default(1)
+  stravaAccessToken  String?
+  stravaRefreshToken String?
+  stravaExpiresAt    Int?
+  updatedAt          DateTime @updatedAt
+}
+
 model Activity {
   id            String   @id @default(cuid())
   stravaId      String   @unique

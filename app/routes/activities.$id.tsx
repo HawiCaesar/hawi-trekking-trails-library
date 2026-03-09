@@ -2,21 +2,21 @@ import { lazy, Suspense, useRef, useState } from "react";
 import { Form, Link, useActionData, useLoaderData } from "react-router";
 import type { ActivityMapHandle } from "~/components/ActivityMap";
 import { db } from "~/lib/db.server";
-import { requireAuth } from "~/lib/session.server";
+import { getIsOwner, requireOwner } from "~/lib/session.server";
 import type { Route } from "./+types/activities.$id";
 
 const ActivityMap = lazy(() => import("~/components/ActivityMap"));
 const ElevationChart = lazy(() => import("~/components/ElevationChart"));
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-  await requireAuth(request);
+  const isOwner = await getIsOwner(request);
   const activity = await db.activity.findUnique({ where: { id: params.id } });
   if (!activity) throw new Response("Not Found", { status: 404 });
-  return { activity };
+  return { activity, isOwner };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
-  await requireAuth(request);
+  await requireOwner(request);
   const formData = await request.formData();
 
   const rating = formData.get("rating") ? Number(formData.get("rating")) : null;
@@ -62,7 +62,7 @@ const CONDITIONS_OPTIONS = ["Excellent", "Good", "Muddy", "Wet", "Icy", "Overgro
 const WEATHER_OPTIONS = ["Sunny", "Cloudy", "Overcast", "Light Rain", "Heavy Rain", "Foggy", "Windy"];
 
 export default function ActivityDetail() {
-  const { activity } = useLoaderData<typeof loader>();
+  const { activity, isOwner } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const [editing, setEditing] = useState(false);
   const mapRef = useRef<ActivityMapHandle>(null);
@@ -126,18 +126,14 @@ export default function ActivityDetail() {
       <div className="bg-gray-50 rounded-lg p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-gray-800">Trail Notes</h2>
-          {/**
-           * Commenting this out so that I can add some proper auth and permissions later without worrying about the UI. 
-           * For now, just show the notes but hide the edit button since there's no real user accounts or ownership yet.
-           */}
-          {/* {!editing && (
+          {isOwner && !editing && (
             <button
               onClick={() => setEditing(true)}
               className="text-sm text-orange-500 hover:text-orange-600 font-medium"
             >
               {activity.notes || activity.difficulty || activity.rating ? "Edit" : "+ Add notes"}
             </button>
-          )} */}
+          )}
         </div>
 
         {editing ? (

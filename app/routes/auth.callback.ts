@@ -1,8 +1,9 @@
 import { redirect } from "react-router";
 import { commitSession, getSession } from "~/lib/session.server";
+import { db } from "~/lib/db.server";
 import type { Route } from "./+types/auth.callback";
 
-// Handles Strava OAuth callback — exchanges code for tokens and stores in session
+// Handles Strava OAuth callback — exchanges code for tokens and persists to DB
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
@@ -30,12 +31,24 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   const data = await res.json();
 
-  const session = await getSession(request);
-  session.set("accessToken", data.access_token);
-  session.set("refreshToken", data.refresh_token);
-  session.set("expiresAt", data.expires_at);
-  session.set("athleteId", data.athlete?.id);
+  // Persist tokens to DB — survives logout/login cycles
+  await db.settings.upsert({
+    where: { id: 1 },
+    create: {
+      id: 1,
+      stravaAccessToken: data.access_token,
+      stravaRefreshToken: data.refresh_token,
+      stravaExpiresAt: data.expires_at,
+    },
+    update: {
+      stravaAccessToken: data.access_token,
+      stravaRefreshToken: data.refresh_token,
+      stravaExpiresAt: data.expires_at,
+    },
+  });
 
+  // Preserve existing session (isOwner stays intact if already logged in)
+  const session = await getSession(request);
   return redirect("/activities", {
     headers: { "Set-Cookie": await commitSession(session) },
   });

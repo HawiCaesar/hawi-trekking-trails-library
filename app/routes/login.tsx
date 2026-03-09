@@ -16,7 +16,7 @@ export async function action({ request }: Route.ActionArgs) {
   const hash = Buffer.from(process.env.ADMIN_PASSWORD_HASH!, "base64").toString("utf8");
   const valid = await bcrypt.compare(password, hash);
   if (!valid) {
-    return { error: "Incorrect passwor d" };
+    return { error: "Incorrect password" };
   }
 
   const session = await getSession(request);

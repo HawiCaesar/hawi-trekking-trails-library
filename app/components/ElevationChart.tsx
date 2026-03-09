@@ -49,7 +49,7 @@ export default function ElevationChart({ altitude, totalDistanceKm, onHoverIndex
           tick={{ fontSize: 11, fill: "#9ca3af" }}
           axisLine={false}
           tickLine={false}
-          width={45}
+          width={55}
         />
         <Tooltip
           formatter={(value) => [`${value}m`, "Elevation"]}

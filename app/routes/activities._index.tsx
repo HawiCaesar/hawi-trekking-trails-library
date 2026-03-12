@@ -172,33 +172,35 @@ export default function ActivitiesIndex() {
         </div>
       )}
 
-      {/* Search & sort */}
+      {/* Search */}
       {imported.length > 0 && (
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            placeholder="Search hikes..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
-          />
+        <input
+          type="text"
+          placeholder="Search hikes..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full mb-4 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
+        />
+      )}
+
+      {/* Imported hikes — visible to everyone */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {isOwner ? "Imported Hikes" : "Hikes"}{filtered.length > 0 && ` (${filtered.length})`}
+        </h2>
+        {imported.length > 0 && (
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
             <option value="date-desc">Newest first</option>
             <option value="date-asc">Oldest first</option>
             <option value="distance-desc">Longest first</option>
             <option value="elevation-desc">Most elevation</option>
           </select>
-        </div>
-      )}
-
-      {/* Imported hikes — visible to everyone */}
-      <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-        {isOwner ? "Imported Hikes" : "Hikes"}{filtered.length > 0 && ` (${filtered.length})`}
-      </h2>
+        )}
+      </div>
       {imported.length === 0 ? (
         <p className="text-sm text-gray-400 dark:text-gray-500 italic">No hikes yet.</p>
       ) : filtered.length === 0 ? (

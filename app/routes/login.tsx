@@ -32,10 +32,10 @@ export default function Login() {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
       <div className="text-center w-full max-w-sm px-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">HawiTrekkTrails</h1>
-        <p className="text-gray-500 mb-8">Your personal hiking trail archive</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">HawiTrekkTrails</h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-8">Your personal hiking trail archive</p>
 
         <Form method="post" className="space-y-4">
           <input
@@ -43,7 +43,7 @@ export default function Login() {
             name="password"
             placeholder="Password"
             required
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
           {actionData && "error" in actionData && (
             <p className="text-red-500 text-sm">{actionData.error}</p>
@@ -57,7 +57,7 @@ export default function Login() {
           </button>
         </Form>
 
-        <Link to="/activities" className="text-sm text-gray-400 hover:text-gray-600 block mt-4">
+        <Link to="/activities" className="text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 block mt-4">
           ← Back to hikes
         </Link>
       </div>

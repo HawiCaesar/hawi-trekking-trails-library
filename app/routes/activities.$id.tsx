@@ -73,12 +73,12 @@ export default function ActivityDetail() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <Link to="/activities" className="text-sm text-gray-500 hover:text-gray-700 mb-4 inline-block">
+      <Link to="/activities" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4 inline-block">
         ← Back to hikes
       </Link>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">{activity.name}</h1>
-      <p className="text-sm text-gray-500 mb-6">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">{activity.name}</h1>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
         {new Date(activity.startDate).toLocaleDateString("en-GB", {
           weekday: "long", year: "numeric", month: "long", day: "numeric",
         })}
@@ -92,9 +92,9 @@ export default function ActivityDetail() {
           { label: "Elevation Gain", value: `${activity.totalElevGain}m` },
           { label: "Pace", value: formatPace(activity.distance, activity.movingTime) },
         ].map(({ label, value }) => (
-          <div key={label} className="bg-gray-50 rounded-lg p-4 text-center">
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-            <p className="text-lg font-semibold text-gray-900">{value}</p>
+          <div key={label} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{value}</p>
           </div>
         ))}
       </div>
@@ -102,30 +102,30 @@ export default function ActivityDetail() {
       {/* Map */}
       {coords.length > 0 ? (
         <div className="mb-6">
-          <Suspense fallback={<div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">Loading map...</div>}>
+          <Suspense fallback={<div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500">Loading map...</div>}>
             <ActivityMap ref={mapRef} coords={coords} />
           </Suspense>
         </div>
       ) : (
-        <div className="mb-6 h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+        <div className="mb-6 h-32 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">
           No GPS data available
         </div>
       )}
 
       {/* Elevation Chart */}
       {altitude.length > 0 && (
-        <div className="mb-6 bg-gray-50 rounded-lg p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Elevation Profile</p>
-          <Suspense fallback={<div className="h-44 flex items-center justify-center text-gray-400 text-sm">Loading chart...</div>}>
+        <div className="mb-6 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Elevation Profile</p>
+          <Suspense fallback={<div className="h-44 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">Loading chart...</div>}>
             <ElevationChart altitude={altitude} totalDistanceKm={activity.distance / 1000} onHoverIndex={(i) => mapRef.current?.setHoverCoord(i != null ? coords[i] ?? null : null)} />
           </Suspense>
         </div>
       )}
 
       {/* Annotations */}
-      <div className="bg-gray-50 rounded-lg p-5">
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-800">Trail Notes</h2>
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100">Trail Notes</h2>
           {isOwner && !editing && (
             <button
               onClick={() => setEditing(true)}
@@ -140,46 +140,46 @@ export default function ActivityDetail() {
           <Form method="post" onSubmit={() => setEditing(false)}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Difficulty</label>
-                <select name="difficulty" defaultValue={activity.difficulty ?? ""} className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Difficulty</label>
+                <select name="difficulty" defaultValue={activity.difficulty ?? ""} className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm">
                   <option value="">— Select —</option>
                   {DIFFICULTY_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Trail Conditions</label>
-                <select name="conditions" defaultValue={activity.conditions ?? ""} className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Trail Conditions</label>
+                <select name="conditions" defaultValue={activity.conditions ?? ""} className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm">
                   <option value="">— Select —</option>
                   {CONDITIONS_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Weather</label>
-                <select name="weather" defaultValue={activity.weather ?? ""} className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Weather</label>
+                <select name="weather" defaultValue={activity.weather ?? ""} className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm">
                   <option value="">— Select —</option>
                   {WEATHER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Rating (1–5)</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Rating (1–5)</label>
                 <input
                   type="number" name="rating" min="1" max="5"
                   defaultValue={activity.rating ?? ""}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Companions</label>
-                <input type="text" name="companions" defaultValue={activity.companions ?? ""} className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Companions</label>
+                <input type="text" name="companions" defaultValue={activity.companions ?? ""} className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Gear</label>
-                <input type="text" name="gear" defaultValue={activity.gear ?? ""} className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Gear</label>
+                <input type="text" name="gear" defaultValue={activity.gear ?? ""} className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm" />
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
-              <textarea name="notes" defaultValue={activity.notes ?? ""} rows={3} className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</label>
+              <textarea name="notes" defaultValue={activity.notes ?? ""} rows={3} className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded px-3 py-2 text-sm" />
             </div>
 
             {actionData && "error" in actionData && (
@@ -190,39 +190,39 @@ export default function ActivityDetail() {
               <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-2 rounded transition-colors">
                 Save
               </button>
-              <button type="button" onClick={() => setEditing(false)} className="text-gray-500 hover:text-gray-700 text-sm px-4 py-2 rounded border border-gray-300 transition-colors">
+              <button type="button" onClick={() => setEditing(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm px-4 py-2 rounded border border-gray-300 dark:border-gray-600 transition-colors">
                 Cancel
               </button>
             </div>
           </Form>
         ) : (
-          <div className="space-y-2 text-sm text-gray-600">
+          <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
             {!activity.difficulty && !activity.rating && !activity.notes && !activity.conditions && (
-              <p className="text-gray-400 italic">No notes added yet.</p>
+              <p className="text-gray-400 dark:text-gray-500 italic">No notes added yet.</p>
             )}
             {activity.rating && (
-              <p><span className="font-medium text-gray-700">Rating:</span> {"★".repeat(activity.rating)}{"☆".repeat(5 - activity.rating)}</p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Rating:</span> {"★".repeat(activity.rating)}{"☆".repeat(5 - activity.rating)}</p>
             )}
             {activity.difficulty && (
-              <p><span className="font-medium text-gray-700">Difficulty:</span> {activity.difficulty}</p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Difficulty:</span> {activity.difficulty}</p>
             )}
             {activity.conditions && (
-              <p><span className="font-medium text-gray-700">Conditions:</span> {activity.conditions}</p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Conditions:</span> {activity.conditions}</p>
             )}
             {activity.weather && (
-              <p><span className="font-medium text-gray-700">Weather:</span> {activity.weather}</p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Weather:</span> {activity.weather}</p>
             )}
             {activity.companions && (
-              <p><span className="font-medium text-gray-700">With:</span> {activity.companions}</p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">With:</span> {activity.companions}</p>
             )}
             {activity.gear && (
-              <p><span className="font-medium text-gray-700">Gear:</span> {activity.gear}</p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Gear:</span> {activity.gear}</p>
             )}
             {activity.notes && (
-              <p><span className="font-medium text-gray-700">Notes:</span> {activity.notes}</p>
+              <p><span className="font-medium text-gray-700 dark:text-gray-200">Notes:</span> {activity.notes}</p>
             )}
             {actionData && "success" in actionData && (
-              <p className="text-green-600 text-sm mt-2">Saved successfully.</p>
+              <p className="text-green-600 dark:text-green-400 text-sm mt-2">Saved successfully.</p>
             )}
           </div>
         )}

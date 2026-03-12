@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Form, Link, useLoaderData, useNavigation } from "react-router";
 import { db } from "~/lib/db.server";
 import { commitSession, getIsOwner, getSession, requireOwner } from "~/lib/session.server";
@@ -78,23 +79,37 @@ function formatDuration(seconds: number) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+type SortKey = "date-desc" | "date-asc" | "distance-desc" | "elevation-desc";
+
 export default function ActivitiesIndex() {
   const { imported, stravaActivities, importedMap, isOwner, stravaConnected } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const importingId = navigation.formData?.get("stravaId");
 
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortKey>("date-desc");
+
+  const filtered = imported
+    .filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      if (sort === "date-asc") return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      if (sort === "distance-desc") return b.distance - a.distance;
+      if (sort === "elevation-desc") return b.totalElevGain - a.totalElevGain;
+      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime(); // date-desc
+    });
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Hawi's Hikes</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Hawi's Hikes</h1>
         {isOwner ? (
           <Form method="post" action="/logout">
-            <button type="submit" className="text-sm text-gray-400 hover:text-gray-600">
+            <button type="submit" className="text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
               Sign out
             </button>
           </Form>
         ) : (
-          <Link to="/login" className="text-sm text-gray-400 hover:text-gray-600">
+          <Link to="/login" className="text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
             Owner login
           </Link>
         )}
@@ -104,8 +119,8 @@ export default function ActivitiesIndex() {
       {isOwner && (
         <div className="mb-8">
           {!stravaConnected ? (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center justify-between">
-              <p className="text-sm text-orange-700">Connect Strava to import new hikes.</p>
+            <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg p-4 flex items-center justify-between">
+              <p className="text-sm text-orange-700 dark:text-orange-300">Connect Strava to import new hikes.</p>
               <a
                 href="/auth/strava"
                 className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded transition-colors"
@@ -115,7 +130,7 @@ export default function ActivitiesIndex() {
             </div>
           ) : (
             <>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Import from Strava</h2>
+              <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Import from Strava</h2>
               <div className="space-y-2">
                 {stravaActivities
                   .filter((a: any) => !importedMap[String(a.id)])
@@ -124,11 +139,11 @@ export default function ActivitiesIndex() {
                     return (
                       <div
                         key={activity.id}
-                        className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4"
+                        className="flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                       >
                         <div>
-                          <p className="font-medium text-gray-900">{activity.name}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{activity.name}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             {new Date(activity.start_date).toLocaleDateString()} ·{" "}
                             {formatDistance(activity.distance)} ·{" "}
                             {formatDuration(activity.moving_time)} ·{" "}
@@ -149,7 +164,7 @@ export default function ActivitiesIndex() {
                     );
                   })}
                 {stravaActivities.filter((a: any) => !importedMap[String(a.id)]).length === 0 && (
-                  <p className="text-sm text-gray-400 italic">All Strava activities are imported.</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">All Strava activities are imported.</p>
                 )}
               </div>
             </>
@@ -157,23 +172,48 @@ export default function ActivitiesIndex() {
         </div>
       )}
 
+      {/* Search & sort */}
+      {imported.length > 0 && (
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            placeholder="Search hikes..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-400"
+          />
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            <option value="date-desc">Newest first</option>
+            <option value="date-asc">Oldest first</option>
+            <option value="distance-desc">Longest first</option>
+            <option value="elevation-desc">Most elevation</option>
+          </select>
+        </div>
+      )}
+
       {/* Imported hikes — visible to everyone */}
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-        {isOwner ? "Imported Hikes" : "Hikes"}
+      <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+        {isOwner ? "Imported Hikes" : "Hikes"}{filtered.length > 0 && ` (${filtered.length})`}
       </h2>
       {imported.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">No hikes yet.</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 italic">No hikes yet.</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-gray-400 dark:text-gray-500 italic">No hikes match your search.</p>
       ) : (
         <div className="space-y-3">
-          {imported.map((activity) => (
+          {filtered.map((activity) => (
             <Link
               key={activity.id}
               to={`/activities/${activity.id}`}
-              className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 hover:border-orange-300 transition-colors"
+              className="flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-orange-300 dark:hover:border-orange-600 transition-colors"
             >
               <div>
-                <p className="font-medium text-gray-900">{activity.name}</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-medium text-gray-900 dark:text-gray-100">{activity.name}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {new Date(activity.startDate).toLocaleDateString()} ·{" "}
                   {formatDistance(activity.distance)} ·{" "}
                   {formatDuration(activity.movingTime)} ·{" "}

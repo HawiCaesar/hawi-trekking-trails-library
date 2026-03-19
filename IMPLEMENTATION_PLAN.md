@@ -689,15 +689,15 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 Only tackle these after Phase 6 is fully working.
 
-| Feature | Notes |
-|---|---|
-| Responsive mobile layout | Tailwind breakpoints on list/detail |
-| Bulk import all activities | Loop + upsert with rate limiting |
-| Activity search & sort | Filter by type, date range, sort by distance |
-| Loading skeletons | Use Remix `useNavigation` pending states |
-| Activity stats dashboard | Aggregate totals (total km, hikes, elevation) |
-| GPX upload | Parse GPX XML → gpsData JSON |
-| Dark mode | CSS variables or Tailwind `dark:` classes |
+| Feature | Status | Notes |
+|---|---|---|
+| ✅ Responsive mobile layout | Done | Tailwind breakpoints on list/detail; sort dropdown moved inline with HIKES heading |
+| ✅ Activity search & sort | Done | Search by name, sort by date/distance/elevation — client-side, no loader changes |
+| ✅ Dark mode | Done | Tailwind `dark:` classes applied across activities list, detail, login pages |
+| Bulk import all activities | Pending | Loop + upsert with rate limiting |
+| Loading skeletons | Pending | Use React Router `useNavigation` pending states |
+| Activity stats dashboard | Pending | Aggregate totals (total km, hikes, elevation) |
+| GPX upload | Pending | Parse GPX XML → gpsData JSON |
 
 ---
 

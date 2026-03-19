@@ -397,7 +397,7 @@ Each phase has a clear goal, specific commands/files to create, and a verificati
 
 ---
 
-## Phase 8: Public / Owner Access Model
+## Phase 7: Public / Owner Access Model
 
 **Goal**: Hike list and details are publicly visible to anyone. The owner (Brian) logs in at `/login` with a private password to unlock editing and Strava import. Strava tokens are persisted in the database so the owner only needs to connect Strava once — ever.
 
@@ -669,25 +669,32 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 ---
 
-### Verify Phase 8
+### Verify Phase 7
 
+**Public access (no login)**
 - [ ] Visiting `/activities` without logging in shows the imported hike list (read-only)
 - [ ] Visiting `/activities/:id` without logging in shows hike detail + map (no edit button)
+- [ ] POSTing to actions without owner session returns 403
+
+**Owner login**
 - [ ] `/login` shows a password form; wrong password shows an error message
 - [ ] Correct password sets `isOwner` in session, redirects to `/activities`
+- [ ] Owner sees edit button on activity detail pages
+
+**Strava connection**
 - [ ] Owner with no Strava connection sees "Connect Strava" prompt on the list page
 - [ ] Clicking "Connect Strava" completes OAuth; tokens saved to DB
 - [ ] Owner now sees the Strava import list with Import buttons
+
+**Token persistence**
 - [ ] Logging out and back in with password still shows the import list (tokens persist in DB)
 - [ ] Token auto-refreshes without any manual action
-- [ ] Owner sees edit button on activity detail pages
-- [ ] POSTing to actions without owner session returns 403
 
 ---
 
-## Phase 7: Polish (Post-MVP)
+## Phase 8: Polish (Post-MVP)
 
-Only tackle these after Phase 6 is fully working.
+Only tackle these after Phase 7 is fully working.
 
 | Feature | Status | Notes |
 |---|---|---|

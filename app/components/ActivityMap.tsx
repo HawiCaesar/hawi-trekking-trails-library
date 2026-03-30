@@ -1,6 +1,7 @@
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { CircleMarker, Map } from "leaflet";
-import type * as L from "leaflet";
 
 interface Props {
   coords: [number, number][];
@@ -14,13 +15,11 @@ const ActivityMap = forwardRef<ActivityMapHandle, Props>(function ActivityMap({ 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const hoverMarkerRef = useRef<CircleMarker | null>(null);
-  const leafletRef = useRef<typeof L | null>(null);
 
   useImperativeHandle(ref, () => ({
     setHoverCoord(coord) {
       const map = mapInstanceRef.current;
-      const L = leafletRef.current;
-      if (!map || !L) return;
+      if (!map) return;
 
       if (coord) {
         if (hoverMarkerRef.current) {
@@ -46,37 +45,23 @@ const ActivityMap = forwardRef<ActivityMapHandle, Props>(function ActivityMap({ 
   useEffect(() => {
     if (!mapRef.current || coords.length === 0) return;
 
-    let cancelled = false;
-    let mapInstance: Map | null = null;
+    const map = L.map(mapRef.current).setView(coords[0], 13);
+    mapInstanceRef.current = map;
 
-    import("leaflet").then((L) => {
-      if (cancelled || !mapRef.current) return;
-      import("leaflet/dist/leaflet.css");
-      leafletRef.current = L;
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
 
-      const map = L.map(mapRef.current).setView(coords[0], 13);
-      mapInstance = map;
-      mapInstanceRef.current = map;
+    const polyline = L.polyline(coords, { color: "#f97316", weight: 3 }).addTo(map);
+    map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
-      }).addTo(map);
-
-      const polyline = L.polyline(coords, { color: "#f97316", weight: 3 }).addTo(map);
-      map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
-
-      L.circleMarker(coords[0], { radius: 6, color: "#16a34a", fillColor: "#16a34a", fillOpacity: 1 }).addTo(map);
-      L.circleMarker(coords[coords.length - 1], { radius: 6, color: "#dc2626", fillColor: "#dc2626", fillOpacity: 1 }).addTo(map);
-    });
+    L.circleMarker(coords[0], { radius: 6, color: "#16a34a", fillColor: "#16a34a", fillOpacity: 1 }).addTo(map);
+    L.circleMarker(coords[coords.length - 1], { radius: 6, color: "#dc2626", fillColor: "#dc2626", fillOpacity: 1 }).addTo(map);
 
     return () => {
-      cancelled = true;
-      if (mapInstance) {
-        mapInstance.remove();
-        mapInstanceRef.current = null;
-        hoverMarkerRef.current = null;
-        leafletRef.current = null;
-      }
+      map.remove();
+      mapInstanceRef.current = null;
+      hoverMarkerRef.current = null;
     };
   }, [coords]);
 

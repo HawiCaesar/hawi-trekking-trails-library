@@ -6,6 +6,7 @@ import { getIsOwner, requireOwner } from "~/lib/session.server";
 import type { Route } from "./+types/activities.$id";
 
 const ActivityMap = lazy(() => import("~/components/ActivityMap"));
+const ActivityFlyoverMap = lazy(() => import("~/components/ActivityFlyoverMap"));
 const ElevationChart = lazy(() => import("~/components/ElevationChart"));
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -65,6 +66,7 @@ export default function ActivityDetail() {
   const { activity, isOwner } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const [editing, setEditing] = useState(false);
+  const [mapView, setMapView] = useState<"2d" | "3d">("2d");
   const mapRef = useRef<ActivityMapHandle>(null);
 
   const gps = activity.gpsData as any;
@@ -102,9 +104,52 @@ export default function ActivityDetail() {
       {/* Map */}
       {coords.length > 0 ? (
         <div className="mb-6">
-          <Suspense fallback={<div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500">Loading map...</div>}>
-            <ActivityMap ref={mapRef} coords={coords} />
-          </Suspense>
+          <div className="mb-3 inline-flex rounded-lg bg-gray-100 p-1 dark:bg-gray-800" role="tablist" aria-label="Map view">
+            <button
+              type="button"
+              role="tab"
+              id="two-dimensional-map-tab"
+              aria-selected={mapView === "2d"}
+              aria-controls="two-dimensional-map-panel"
+              onClick={() => setMapView("2d")}
+              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                mapView === "2d"
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
+            >
+              2D Route
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="three-dimensional-map-tab"
+              aria-selected={mapView === "3d"}
+              aria-controls="three-dimensional-map-panel"
+              onClick={() => setMapView("3d")}
+              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                mapView === "3d"
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
+            >
+              3D Flyover
+            </button>
+          </div>
+
+          {mapView === "2d" ? (
+            <div id="two-dimensional-map-panel" role="tabpanel" aria-labelledby="two-dimensional-map-tab">
+              <Suspense fallback={<div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500">Loading map...</div>}>
+                <ActivityMap ref={mapRef} coords={coords} />
+              </Suspense>
+            </div>
+          ) : (
+            <div id="three-dimensional-map-panel" role="tabpanel" aria-labelledby="three-dimensional-map-tab">
+              <Suspense fallback={<div className="h-[480px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500">Loading 3D flyover...</div>}>
+                <ActivityFlyoverMap coords={coords} />
+              </Suspense>
+            </div>
+          )}
         </div>
       ) : (
         <div className="mb-6 h-32 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">

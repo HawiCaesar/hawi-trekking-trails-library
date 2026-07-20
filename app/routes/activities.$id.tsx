@@ -1,6 +1,7 @@
 import { lazy, Suspense, useRef, useState } from "react";
 import { Form, Link, useActionData, useLoaderData } from "react-router";
-import type { ActivityMapHandle } from "~/components/ActivityMap";
+import type { ActivityMapHandle } from "~/components/ActivityMap.types";
+import ClientOnly from "~/components/ClientOnly";
 import { db } from "~/lib/db.server";
 import { getIsOwner, requireOwner } from "~/lib/session.server";
 import type { Route } from "./+types/activities.$id";
@@ -139,15 +140,31 @@ export default function ActivityDetail() {
 
           {mapView === "2d" ? (
             <div id="two-dimensional-map-panel" role="tabpanel" aria-labelledby="two-dimensional-map-tab">
-              <Suspense fallback={<div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500">Loading map...</div>}>
-                <ActivityMap ref={mapRef} coords={coords} />
-              </Suspense>
+              <ClientOnly
+                fallback={
+                  <div className="flex h-96 items-center justify-center rounded-lg bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500">
+                    Loading map...
+                  </div>
+                }
+              >
+                <Suspense fallback={<div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500">Loading map...</div>}>
+                  <ActivityMap ref={mapRef} coords={coords} />
+                </Suspense>
+              </ClientOnly>
             </div>
           ) : (
             <div id="three-dimensional-map-panel" role="tabpanel" aria-labelledby="three-dimensional-map-tab">
-              <Suspense fallback={<div className="h-[480px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500">Loading 3D flyover...</div>}>
-                <ActivityFlyoverMap coords={coords} />
-              </Suspense>
+              <ClientOnly
+                fallback={
+                  <div className="flex h-[480px] items-center justify-center rounded-lg bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500">
+                    Loading 3D flyover...
+                  </div>
+                }
+              >
+                <Suspense fallback={<div className="h-[480px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500">Loading 3D flyover...</div>}>
+                  <ActivityFlyoverMap coords={coords} />
+                </Suspense>
+              </ClientOnly>
             </div>
           )}
         </div>

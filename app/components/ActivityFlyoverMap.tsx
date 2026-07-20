@@ -1,5 +1,3 @@
-"use client";
-
 import mapboxgl, { type GeoJSONSource, type Map } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useEffect, useMemo, useRef, useState } from "react";

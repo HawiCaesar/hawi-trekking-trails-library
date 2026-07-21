@@ -22,7 +22,6 @@ interface CompletedRouteCache {
 }
 
 interface PlaybackMapState {
-  smoothedBearingRef: { current: number | null };
   smoothedCenterRef: { current: Coordinate | null };
   completedRouteCacheRef: { current: CompletedRouteCache | null };
   lastCompletedRouteEndIndexRef: { current: number | null };
@@ -30,8 +29,6 @@ interface PlaybackMapState {
 }
 
 const PLAYBACK_DURATION_MS = 45_000;
-const CAMERA_LOOK_AHEAD_METERS = 50;
-const BEARING_SMOOTHING_FACTOR = 0.08;
 const CENTER_SMOOTHING_FACTOR = 0.15;
 const PLAYBACK_UI_MIN_INTERVAL_MS = 66;
 const PLAYBACK_UI_PROGRESS_THRESHOLD = 0.002;
@@ -79,10 +76,6 @@ const interpolateCoordinate = (start: Coordinate, end: Coordinate, progress: num
   start[0] + (end[0] - start[0]) * progress,
   start[1] + (end[1] - start[1]) * progress,
 ];
-
-const getProgressWithDistanceOffset = (progress: number, totalDistance: number, offsetMeters: number) => (
-  totalDistance === 0 ? progress : Math.min(1, progress + offsetMeters / totalDistance)
-);
 
 const getRoutePosition = (
   routeCoordinates: Coordinate[],
@@ -147,13 +140,6 @@ const getCompletedRouteCoordinates = (
   return cache.coordinates;
 };
 
-const getSmoothedBearing = (currentBearing: number | null, targetBearing: number) => {
-  if (currentBearing === null) return targetBearing;
-
-  const shortestAngle = ((targetBearing - currentBearing + 540) % 360) - 180;
-  return (currentBearing + shortestAngle * BEARING_SMOOTHING_FACTOR + 360) % 360;
-};
-
 const getSmoothedCoordinate = (current: Coordinate | null, target: Coordinate): Coordinate => {
   if (!current) return target;
 
@@ -164,7 +150,6 @@ const getSmoothedCoordinate = (current: Coordinate | null, target: Coordinate): 
 };
 
 const resetPlaybackMapState = (playbackMapState: PlaybackMapState) => {
-  playbackMapState.smoothedBearingRef.current = null;
   playbackMapState.smoothedCenterRef.current = null;
   playbackMapState.completedRouteCacheRef.current = null;
   playbackMapState.lastCompletedRouteEndIndexRef.current = null;
@@ -184,6 +169,7 @@ const applyPlaybackToMap = (
   totalDistance: number,
   progress: number,
   cameraMode: CameraMode,
+  routeBearing: number,
   playbackMapState: PlaybackMapState,
   options: {
     smoothFollowCamera: boolean;
@@ -193,18 +179,6 @@ const applyPlaybackToMap = (
 ) => {
   const routePosition = getRoutePosition(routeCoordinates, cumulativeDistances, totalDistance, progress);
   if (!routePosition) return;
-
-  const lookAheadProgress = getProgressWithDistanceOffset(
-    progress,
-    totalDistance,
-    CAMERA_LOOK_AHEAD_METERS,
-  );
-  const lookAheadRoutePosition = getRoutePosition(
-    routeCoordinates,
-    cumulativeDistances,
-    totalDistance,
-    lookAheadProgress,
-  );
 
   const completedRouteSource = map.getSource("completed-route") as GeoJSONSource | undefined;
   const hikerSource = map.getSource("hiker") as GeoJSONSource | undefined;
@@ -234,16 +208,9 @@ const applyPlaybackToMap = (
   hikerSource.setData(createPointFeature(routePosition.coordinate));
 
   if (cameraMode === "overview") {
-    playbackMapState.smoothedBearingRef.current = null;
     playbackMapState.smoothedCenterRef.current = null;
     return;
   }
-
-  if (!lookAheadRoutePosition) return;
-
-  const targetBearing = getBearing(routePosition.coordinate, lookAheadRoutePosition.coordinate);
-  const nextBearing = getSmoothedBearing(playbackMapState.smoothedBearingRef.current, targetBearing);
-  playbackMapState.smoothedBearingRef.current = nextBearing;
 
   const cameraCenter = options.smoothFollowCamera
     ? getSmoothedCoordinate(playbackMapState.smoothedCenterRef.current, routePosition.coordinate)
@@ -253,7 +220,7 @@ const applyPlaybackToMap = (
 
   map.jumpTo({
     center: cameraCenter,
-    bearing: nextBearing,
+    bearing: routeBearing,
     zoom: 15,
     pitch: 68,
   });
@@ -264,7 +231,6 @@ export default function ActivityFlyoverMap({ coords }: Props) {
   const mapRef = useRef<Map | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const playbackProgressRef = useRef(0);
-  const smoothedBearingRef = useRef<number | null>(null);
   const smoothedCenterRef = useRef<Coordinate | null>(null);
   const completedRouteCacheRef = useRef<CompletedRouteCache | null>(null);
   const lastCompletedRouteEndIndexRef = useRef<number | null>(null);
@@ -272,7 +238,6 @@ export default function ActivityFlyoverMap({ coords }: Props) {
 
   const playbackMapState = useMemo<PlaybackMapState>(
     () => ({
-      smoothedBearingRef,
       smoothedCenterRef,
       completedRouteCacheRef,
       lastCompletedRouteEndIndexRef,
@@ -307,6 +272,11 @@ export default function ActivityFlyoverMap({ coords }: Props) {
   }, [routeCoordinates]);
 
   const totalDistance = cumulativeDistances[cumulativeDistances.length - 1] ?? 0;
+
+  const routeBearing = useMemo(() => {
+    if (routeCoordinates.length < 2) return 0;
+    return getBearing(routeCoordinates[0], routeCoordinates[routeCoordinates.length - 1]);
+  }, [routeCoordinates]);
 
   useEffect(() => {
     resetPlaybackMapState(playbackMapState);
@@ -427,6 +397,7 @@ export default function ActivityFlyoverMap({ coords }: Props) {
       totalDistance,
       playbackProgress,
       cameraMode,
+      routeBearing,
       playbackMapState,
       { smoothFollowCamera: false, forceRebuildCompletedRoute: true },
     );
@@ -436,6 +407,7 @@ export default function ActivityFlyoverMap({ coords }: Props) {
     isMapReady,
     isPlaying,
     playbackProgress,
+    routeBearing,
     routeCoordinates,
     totalDistance,
   ]);
@@ -471,6 +443,7 @@ export default function ActivityFlyoverMap({ coords }: Props) {
           totalDistance,
           nextProgress,
           cameraMode,
+          routeBearing,
           playbackMapState,
           { smoothFollowCamera: cameraMode === "follow", forceRebuildCompletedRoute: false, frameTime },
         );
@@ -507,6 +480,7 @@ export default function ActivityFlyoverMap({ coords }: Props) {
     isPlaying,
     playbackSpeed,
     playbackMapState,
+    routeBearing,
     routeCoordinates,
     totalDistance,
   ]);

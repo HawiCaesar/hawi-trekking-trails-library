@@ -1,15 +1,25 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
+  --font-sans: "Source Sans 3", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-display: "Oswald", Impact, "Arial Narrow Bold", sans-serif;
 }
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
+  @apply bg-[#f5f1eb] dark:bg-[#1c1916] text-[#1a1816] dark:text-[#f5f1eb];
 
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
+  }
+}
+
+@keyframes hero-zoom {
+  0% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1.15);
   }
 }

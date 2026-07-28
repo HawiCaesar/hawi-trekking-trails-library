@@ -31,14 +31,14 @@ export default function ElevationChart({ altitude, totalDistanceKm, onHoverIndex
       >
         <defs>
           <linearGradient id="elevGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#f97316" stopOpacity={0.05} />
+            <stop offset="5%" stopColor="#2d4a3e" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#2d4a3e" stopOpacity={0.05} />
           </linearGradient>
         </defs>
         <XAxis
           dataKey="distance"
           tickFormatter={(v) => `${v}km`}
-          tick={{ fontSize: 11, fill: "#9ca3af" }}
+          tick={{ fontSize: 11, fill: "#8c8379" }}
           axisLine={false}
           tickLine={false}
           interval="preserveStartEnd"
@@ -46,7 +46,7 @@ export default function ElevationChart({ altitude, totalDistanceKm, onHoverIndex
         <YAxis
           domain={[min - padding, max + padding]}
           tickFormatter={(v) => `${v}m`}
-          tick={{ fontSize: 11, fill: "#9ca3af" }}
+          tick={{ fontSize: 11, fill: "#8c8379" }}
           axisLine={false}
           tickLine={false}
           width={55}
@@ -54,16 +54,16 @@ export default function ElevationChart({ altitude, totalDistanceKm, onHoverIndex
         <Tooltip
           formatter={(value) => [`${value}m`, "Elevation"]}
           labelFormatter={(label) => `${label}km`}
-          contentStyle={{ fontSize: 12, borderRadius: 6, border: "1px solid #e5e7eb" }}
+          contentStyle={{ fontSize: 12, borderRadius: 0, border: "1px solid #ddd5c9" }}
         />
         <Area
           type="monotone"
           dataKey="elevation"
-          stroke="#f97316"
+          stroke="#2d4a3e"
           strokeWidth={2}
           fill="url(#elevGradient)"
           dot={false}
-          activeDot={{ r: 4, fill: "#f97316" }}
+          activeDot={{ r: 4, fill: "#2d4a3e" }}
         />
       </AreaChart>
     </ResponsiveContainer>

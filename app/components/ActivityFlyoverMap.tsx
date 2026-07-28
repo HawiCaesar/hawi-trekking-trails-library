@@ -359,14 +359,14 @@ export default function ActivityFlyoverMap({ coords }: Props) {
         type: "line",
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#334155", "line-width": 4, "line-opacity": 0.7 },
+        paint: { "line-color": "#4a443e", "line-width": 4, "line-opacity": 0.7 },
       });
       map.addLayer({
         id: "completed-route",
         type: "line",
         source: "completed-route",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#f97316", "line-width": 5, "line-opacity": 1 },
+        paint: { "line-color": "#c4a13e", "line-width": 5, "line-opacity": 1 },
       });
       map.addLayer({
         id: "hiker",
@@ -374,7 +374,7 @@ export default function ActivityFlyoverMap({ coords }: Props) {
         source: "hiker",
         paint: {
           "circle-radius": 7,
-          "circle-color": "#f97316",
+          "circle-color": "#c4a13e",
           "circle-stroke-width": 2,
           "circle-stroke-color": "#ffffff",
         },
@@ -385,7 +385,7 @@ export default function ActivityFlyoverMap({ coords }: Props) {
         source: "start",
         paint: {
           "circle-radius": 5,
-          "circle-color": "#16a34a",
+          "circle-color": "#2d4a3e",
           "circle-stroke-width": 2,
           "circle-stroke-color": "#ffffff",
         },
@@ -396,7 +396,7 @@ export default function ActivityFlyoverMap({ coords }: Props) {
         source: "end",
         paint: {
           "circle-radius": 5,
-          "circle-color": "#dc2626",
+          "circle-color": "#c4a13e",
           "circle-stroke-width": 2,
           "circle-stroke-color": "#ffffff",
         },
@@ -542,22 +542,22 @@ export default function ActivityFlyoverMap({ coords }: Props) {
   if (routeCoordinates.length === 0) return null;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-950 dark:border-gray-700">
+    <div className="overflow-hidden border border-[#ddd5c9] bg-[#1c1916] dark:border-[#4a443e]">
       <div className="relative h-[480px]">
         <div ref={mapContainerRef} className="h-full w-full" />
         {mapError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-950/85 p-6 text-center text-sm text-white">
+          <div className="absolute inset-0 flex items-center justify-center bg-[#1c1916]/85 p-6 text-center text-sm text-[#f5f1eb]">
             {mapError}
           </div>
         )}
       </div>
 
-      <div className="flex flex-col gap-3 bg-white p-4 dark:bg-gray-800 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 bg-[#f5f1eb] p-4 dark:bg-[#2a2622] sm:flex-row sm:items-center">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleTogglePlayback}
-            className="rounded bg-orange-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+            className="bg-[#2d4a3e] px-3 py-2 text-sm font-medium text-[#f5f1eb] transition-colors hover:bg-[#1f352b] focus:outline-none focus:ring-2 focus:ring-[#2d4a3e] focus:ring-offset-2 dark:focus:ring-offset-[#2a2622]"
             aria-label={isPlaying ? "Pause flyover" : "Play flyover"}
             disabled={!isMapReady}
           >
@@ -566,14 +566,14 @@ export default function ActivityFlyoverMap({ coords }: Props) {
           <button
             type="button"
             onClick={handleRestart}
-            className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-offset-gray-800"
+            className="border border-[#ddd5c9] px-3 py-2 text-sm font-medium text-[#1a1816] transition-colors hover:bg-[#f0ebe3] focus:outline-none focus:ring-2 focus:ring-[#2d4a3e] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#4a443e] dark:text-[#f5f1eb] dark:hover:bg-[#3d3832] dark:focus:ring-offset-[#2a2622]"
             disabled={!isMapReady}
           >
             Restart
           </button>
         </div>
 
-        <label className="flex min-w-0 flex-1 items-center gap-3 text-sm text-gray-700 dark:text-gray-200">
+        <label className="flex min-w-0 flex-1 items-center gap-3 text-sm text-[#1a1816] dark:text-[#f5f1eb]">
           <span className="sr-only">Flyover progress</span>
           <input
             type="range"
@@ -581,7 +581,7 @@ export default function ActivityFlyoverMap({ coords }: Props) {
             max="100"
             value={Math.round(playbackProgress * 100)}
             onChange={handleProgressChange}
-            className="w-full accent-orange-500"
+            className="w-full accent-[#2d4a3e]"
             disabled={!isMapReady}
           />
           <span className="w-10 text-right tabular-nums">{Math.round(playbackProgress * 100)}%</span>
@@ -593,7 +593,7 @@ export default function ActivityFlyoverMap({ coords }: Props) {
             id="flyover-speed"
             value={playbackSpeed}
             onChange={(event) => setPlaybackSpeed(Number(event.target.value))}
-            className="rounded border border-gray-300 bg-white px-2 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            className="border border-[#ddd5c9] bg-[#f5f1eb] px-2 py-2 text-sm text-[#1a1816] focus:outline-none focus:ring-2 focus:ring-[#2d4a3e] dark:border-[#4a443e] dark:bg-[#3d3832] dark:text-[#f5f1eb]"
           >
             <option value={1}>1×</option>
             <option value={2}>2×</option>
@@ -602,14 +602,14 @@ export default function ActivityFlyoverMap({ coords }: Props) {
           <button
             type="button"
             onClick={() => setCameraMode((currentMode) => currentMode === "follow" ? "overview" : "follow")}
-            className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-offset-gray-800"
+            className="border border-[#ddd5c9] px-3 py-2 text-sm font-medium text-[#1a1816] transition-colors hover:bg-[#f0ebe3] focus:outline-none focus:ring-2 focus:ring-[#2d4a3e] focus:ring-offset-2 dark:border-[#4a443e] dark:text-[#f5f1eb] dark:hover:bg-[#3d3832] dark:focus:ring-offset-[#2a2622]"
             aria-pressed={cameraMode === "follow"}
           >
             {cameraMode === "follow" ? "Following route" : "Overview"}
           </button>
         </div>
       </div>
-      <p className="bg-white px-4 pb-4 text-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+      <p className="bg-[#f5f1eb] px-4 pb-4 text-xs text-[#5c554d] dark:bg-[#2a2622] dark:text-[#b8ae9f]">
         Playback is simulated from route distance; it does not represent the hike&apos;s actual pace or pauses.
       </p>
     </div>

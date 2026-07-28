@@ -103,9 +103,6 @@ export default function ActivityDetail() {
 
       <main className="max-w-6xl mx-auto px-6 pt-8 md:pt-12 pb-16 md:pb-24">
         <div className="mb-10 md:mb-14">
-          <p className="text-[#c4a13e] text-xs font-semibold uppercase tracking-[0.2em] mb-3">
-            Trip Report
-          </p>
           <h1 className="font-[Oswald] text-4xl md:text-6xl font-bold text-[#1a1816] dark:text-[#f5f1eb] leading-[0.95] tracking-tight">
             {activity.name}
           </h1>
@@ -166,19 +163,19 @@ export default function ActivityDetail() {
                 <div id="two-dimensional-map-panel" role="tabpanel" aria-labelledby="two-dimensional-map-tab">
                   <ClientOnly
                     fallback={
-                      <div className="flex h-[400px] md:h-[520px] items-center justify-center bg-[#f0ebe3] dark:bg-[#2a2622] text-[#8c8379] dark:text-[#b8ae9f]">
+                      <div className="flex h-[480px] md:h-[580px] items-center justify-center bg-[#f0ebe3] dark:bg-[#2a2622] text-[#8c8379] dark:text-[#b8ae9f]">
                         Loading map…
                       </div>
                     }
                   >
                     <Suspense
                       fallback={
-                        <div className="h-[400px] md:h-[520px] bg-[#f0ebe3] dark:bg-[#2a2622] flex items-center justify-center text-[#8c8379] dark:text-[#b8ae9f]">
+                        <div className="h-[480px] md:h-[580px] bg-[#f0ebe3] dark:bg-[#2a2622] flex items-center justify-center text-[#8c8379] dark:text-[#b8ae9f]">
                           Loading map…
                         </div>
                       }
                     >
-                      <div className="h-[400px] md:h-[520px]">
+                      <div className="h-[480px] md:h-[580px]">
                         <ActivityMap ref={mapRef} coords={coords} />
                       </div>
                     </Suspense>

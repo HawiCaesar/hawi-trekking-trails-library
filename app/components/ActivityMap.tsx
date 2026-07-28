@@ -79,7 +79,7 @@ const ActivityMap = forwardRef<ActivityMapHandle, Props>(function ActivityMap({ 
     };
   }, [coords]);
 
-  return <div ref={mapRef} style={{ height: "400px", width: "100%" }} className="rounded-lg z-0" />;
+  return <div ref={mapRef} className="h-full w-full rounded-lg z-0" />;
 });
 
 export default ActivityMap;

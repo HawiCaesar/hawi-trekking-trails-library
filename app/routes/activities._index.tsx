@@ -285,29 +285,31 @@ export default function ActivitiesIndex() {
                 to={`/activities/${activity.id}`}
                 className="group focus:outline-none focus:ring-2 focus:ring-[#2d4a3e] dark:focus:ring-[#a3c4b3]"
               >
-                <article className="h-full bg-white dark:bg-[#2a2622] border border-[#ddd5c9] dark:border-[#4a443e] p-5 transition-all duration-200 ease-out group-hover:-translate-y-0.5 group-hover:shadow-sm">
-                  <p className="text-[#5c554d] dark:text-[#b8ae9f] text-xs uppercase tracking-[0.15em] mb-3">
-                    {new Date(activity.startDate).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </p>
-                  <h3 className="font-[Oswald] text-xl font-semibold text-[#1a1816] dark:text-[#f5f1eb] group-hover:text-[#2d4a3e] dark:group-hover:text-[#a3c4b3] transition-colors leading-tight">
-                    {activity.name}
-                  </h3>
-                  <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#5c554d] dark:text-[#b8ae9f] uppercase tracking-wider">
-                    <span>{formatDistance(activity.distance)}</span>
-                    <span>{formatDuration(activity.movingTime)}</span>
-                    <span>{activity.totalElevGain}m gain</span>
-                  </div>
-                  <div className="mt-5 pt-4 border-t border-[#ddd5c9] dark:border-[#4a443e] flex items-center justify-between">
-                    <span className="text-sm font-semibold text-[#2d4a3e] dark:text-[#a3c4b3]">
-                      Read the route
-                    </span>
-                    <span aria-hidden="true" className="text-lg text-[#2d4a3e] dark:text-[#a3c4b3] transition-transform duration-200 group-hover:translate-x-1">
-                      →
-                    </span>
+                <article className="h-full border border-[#ddd5c9] dark:border-[#4a443e] overflow-hidden transition-shadow duration-200 ease-out group-hover:shadow-sm">
+                  <div className="h-full bg-white dark:bg-[#2a2622] p-5 transition-transform duration-200 ease-out group-hover:-translate-y-0.5">
+                    <p className="text-[#5c554d] dark:text-[#b8ae9f] text-xs uppercase tracking-[0.15em] mb-3">
+                      {new Date(activity.startDate).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </p>
+                    <h3 className="font-[Oswald] text-xl font-semibold text-[#1a1816] dark:text-[#f5f1eb] group-hover:text-[#2d4a3e] dark:group-hover:text-[#a3c4b3] transition-colors leading-tight">
+                      {activity.name}
+                    </h3>
+                    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#5c554d] dark:text-[#b8ae9f] uppercase tracking-wider">
+                      <span>{formatDistance(activity.distance)}</span>
+                      <span>{formatDuration(activity.movingTime)}</span>
+                      <span>{activity.totalElevGain}m gain</span>
+                    </div>
+                    <div className="mt-5 pt-4 border-t border-[#ddd5c9] dark:border-[#4a443e] flex items-center justify-between">
+                      <span className="text-sm font-semibold text-[#2d4a3e] dark:text-[#a3c4b3]">
+                        Read the route
+                      </span>
+                      <span aria-hidden="true" className="text-lg text-[#2d4a3e] dark:text-[#a3c4b3] transition-transform duration-200 group-hover:translate-x-1">
+                        →
+                      </span>
+                    </div>
                   </div>
                 </article>
               </Link>

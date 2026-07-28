@@ -29,7 +29,7 @@ const ActivityMap = forwardRef<ActivityMapHandle, Props>(function ActivityMap({ 
           hoverMarkerRef.current = leafletModule.circleMarker(coord, {
             radius: 7,
             color: "#fff",
-            fillColor: "#f97316",
+            fillColor: "#c4a13e",
             fillOpacity: 1,
             weight: 2,
           }).addTo(map);
@@ -61,11 +61,11 @@ const ActivityMap = forwardRef<ActivityMapHandle, Props>(function ActivityMap({ 
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
 
-      const polyline = L.polyline(coords, { color: "#f97316", weight: 3 }).addTo(map);
+      const polyline = L.polyline(coords, { color: "#c4a13e", weight: 3 }).addTo(map);
       map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
 
-      L.circleMarker(coords[0], { radius: 6, color: "#16a34a", fillColor: "#16a34a", fillOpacity: 1 }).addTo(map);
-      L.circleMarker(coords[coords.length - 1], { radius: 6, color: "#dc2626", fillColor: "#dc2626", fillOpacity: 1 }).addTo(map);
+      L.circleMarker(coords[0], { radius: 6, color: "#2d4a3e", fillColor: "#2d4a3e", fillOpacity: 1 }).addTo(map);
+      L.circleMarker(coords[coords.length - 1], { radius: 6, color: "#c4a13e", fillColor: "#c4a13e", fillOpacity: 1 }).addTo(map);
     };
 
     void initializeMap();

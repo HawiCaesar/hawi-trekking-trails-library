@@ -9,8 +9,8 @@ A personal library of hikes I've done — connected to Strava, with GPS maps and
 
 ## What it does
 
-- Pulls hiking activities from Strava and saves it to my own database.
-- Shows each hike with distance, time, elevation gain, and a GPS route map
+- Pulls hiking activities from Strava and saves it to my own database on request.
+- Shows each hike with distance, time, elevation gain, and a GPS route map. 2D Map and 3D Flyover
 - Lets you add your own notes: difficulty, trail conditions, weather, gear, companions, and a rating
 
 ## Stack

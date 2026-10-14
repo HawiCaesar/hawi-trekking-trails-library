@@ -1,6 +1,6 @@
 # Trails Archive
 
-A personal library of hikes I've done — connected to Strava API, with 2D Map, 3D flyover and trail notes.
+A personal library of hikes I've done — connected to Strava APIs, with 2D Map, 3D flyover and trail notes.
 
 ## Screenshots
 

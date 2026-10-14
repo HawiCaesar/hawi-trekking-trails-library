@@ -5,7 +5,8 @@ A personal library of hikes I've done. Connected to Strava API and integrated wi
 ## Screenshots
 
 ![Hike list](hike-list.png)
-![Hike detail](hike-detail.png)
+![Hike 2D Details](hike-detail.png)
+![Hike 3D Flyover](hike-detail.png)
 
 ## What it does
 

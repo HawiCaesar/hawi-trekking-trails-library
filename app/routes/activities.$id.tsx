@@ -59,6 +59,11 @@ function formatPace(meters: number, seconds: number) {
   return `${m}:${String(s).padStart(2, "0")} /km`;
 }
 
+function formatElevationGain(meters: number) {
+  if (!Number.isFinite(meters)) return "0m";
+  return `${parseFloat(meters.toFixed(2))}m`;
+}
+
 const DIFFICULTY_OPTIONS = ["Easy", "Moderate", "Hard", "Very Hard"];
 const CONDITIONS_OPTIONS = ["Excellent", "Good", "Muddy", "Wet", "Icy", "Overgrown"];
 const WEATHER_OPTIONS = ["Sunny", "Cloudy", "Overcast", "Light Rain", "Heavy Rain", "Foggy", "Windy"];
@@ -118,7 +123,7 @@ export default function ActivityDetail() {
             <span className="hidden sm:inline text-[#ddd5c9] dark:text-[#4a443e]">|</span>
             <Stat label="Distance" value={formatDistance(activity.distance)} />
             <Stat label="Time" value={formatDuration(activity.movingTime)} />
-            <Stat label="Elevation" value={`${activity.totalElevGain}m`} />
+            <Stat label="Elevation" value={formatElevationGain(activity.totalElevGain)} />
             <Stat label="Pace" value={formatPace(activity.distance, activity.movingTime)} />
           </div>
         </div>

@@ -1,19 +1,23 @@
-import { useState } from 'react';
-import { Form, Link, useLoaderData, useNavigation } from 'react-router';
+import { useRef, useState } from 'react';
+import {
+  Form,
+  Link,
+  useActionData,
+  useLoaderData,
+  useNavigation
+} from 'react-router';
 import { db } from '~/lib/db.server';
+import { getIsOwner, requireOwner } from '~/lib/session.server';
 import {
-  commitSession,
-  getIsOwner,
-  getSession,
-  requireOwner
-} from '~/lib/session.server';
-import {
-  getActivityById,
-  getActivityStreams,
-  getAthleteActivities,
-  getValidStravaToken
-} from '~/services/strava.server';
+  ACTIVITY_SOURCE_FITOTRACK_GPX,
+  GpxParseError,
+  parseGpxFromBuffer
+} from '~/services/gpx.server';
 import type { Route } from './+types/activities._index';
+
+type ActionData =
+  | { error: string }
+  | { duplicate: true; existingActivityId: string; name: string };
 
 export async function loader({ request }: Route.LoaderArgs) {
   const isOwner = await getIsOwner(request);
@@ -21,7 +25,6 @@ export async function loader({ request }: Route.LoaderArgs) {
   const imported = await db.activity.findMany({
     select: {
       id: true,
-      stravaId: true,
       name: true,
       distance: true,
       movingTime: true,
@@ -31,78 +34,74 @@ export async function loader({ request }: Route.LoaderArgs) {
     orderBy: { startDate: 'desc' }
   });
 
-  if (!isOwner) {
-    return {
-      imported,
-      stravaActivities: [],
-      importedMap: {},
-      isOwner: false,
-      stravaConnected: false
-    };
-  }
-
-  const settings = await db.settings.findUnique({ where: { id: 1 } });
-  if (!settings?.stravaAccessToken) {
-    return {
-      imported,
-      stravaActivities: [],
-      importedMap: {},
-      isOwner: true,
-      stravaConnected: false
-    };
-  }
-
-  const token = await getValidStravaToken();
-  const stravaActivities = await getAthleteActivities(token);
-  const importedMap = Object.fromEntries(
-    imported.map((a) => [a.stravaId, a.id])
-  );
-
-  return {
-    imported,
-    stravaActivities,
-    importedMap,
-    isOwner: true,
-    stravaConnected: true
-  };
+  return { imported, isOwner };
 }
 
 export async function action({ request }: Route.ActionArgs) {
   await requireOwner(request);
 
-  const session = await getSession(request);
-  const token = await getValidStravaToken();
-
   const formData = await request.formData();
-  const stravaId = formData.get('stravaId') as string;
+  const file = formData.get('gpx');
 
-  const [activity, streams] = await Promise.all([
-    getActivityById(token, stravaId),
-    getActivityStreams(token, stravaId)
-  ]);
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: 'Choose a GPX file to import.' } satisfies ActionData;
+  }
 
-  await db.activity.upsert({
-    where: { stravaId },
-    update: {},
-    create: {
-      stravaId,
-      name: activity.name,
-      distance: activity.distance,
-      movingTime: activity.moving_time,
-      elapsedTime: activity.elapsed_time,
-      totalElevGain: activity.total_elevation_gain,
-      startDate: new Date(activity.start_date),
-      type: activity.sport_type ?? activity.type,
-      gpsData: streams
+  const filename = file.name || 'upload.gpx';
+  if (!filename.toLowerCase().endsWith('.gpx')) {
+    return {
+      error: 'Only .gpx files exported from FitoTrack are supported.'
+    } satisfies ActionData;
+  }
+
+  let parsed;
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    parsed = parseGpxFromBuffer(buffer, filename);
+  } catch (err) {
+    const message =
+      err instanceof GpxParseError
+        ? err.message
+        : 'Could not import this GPX file.';
+    return { error: message } satisfies ActionData;
+  }
+
+  const existing = await db.activity.findUnique({
+    where: {
+      source_sourceId: {
+        source: ACTIVITY_SOURCE_FITOTRACK_GPX,
+        sourceId: parsed.sourceId
+      }
+    },
+    select: { id: true, name: true }
+  });
+
+  if (existing) {
+    return {
+      duplicate: true,
+      existingActivityId: existing.id,
+      name: existing.name
+    } satisfies ActionData;
+  }
+
+  const activity = await db.activity.create({
+    data: {
+      source: ACTIVITY_SOURCE_FITOTRACK_GPX,
+      sourceId: parsed.sourceId,
+      name: parsed.name,
+      distance: parsed.distance,
+      movingTime: parsed.movingTime,
+      elapsedTime: parsed.elapsedTime,
+      totalElevGain: parsed.totalElevGain,
+      startDate: parsed.startDate,
+      type: parsed.type,
+      gpsData: parsed.gpsData
     }
   });
 
   return new Response(null, {
     status: 303,
-    headers: {
-      Location: '/activities',
-      'Set-Cookie': await commitSession(session)
-    }
+    headers: { Location: `/activities/${activity.id}` }
   });
 }
 
@@ -119,10 +118,15 @@ function formatDuration(seconds: number) {
 type SortKey = 'date-desc' | 'date-asc' | 'distance-desc' | 'elevation-desc';
 
 export default function ActivitiesIndex() {
-  const { imported, stravaActivities, importedMap, isOwner, stravaConnected } =
-    useLoaderData<typeof loader>();
+  const { imported, isOwner } = useLoaderData<typeof loader>();
+  const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
-  const importingId = navigation.formData?.get('stravaId');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+
+  const isImporting =
+    navigation.state === 'submitting' &&
+    navigation.formData?.has('gpx') === true;
 
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortKey>('date-desc');
@@ -139,9 +143,10 @@ export default function ActivitiesIndex() {
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
     });
 
-  const importable = stravaActivities.filter(
-    (a: any) => !importedMap[String(a.id)]
-  );
+  const handleFileChange = () => {
+    const name = fileInputRef.current?.files?.[0]?.name ?? null;
+    setSelectedFileName(name);
+  };
 
   return (
     <div className='min-h-screen bg-[#f5f1eb] dark:bg-[#1c1916]'>
@@ -191,8 +196,8 @@ export default function ActivitiesIndex() {
               Hawi's Hikes
             </h1>
             <p className='mt-4 text-[#f5f1eb]/90 text-base md:text-lg max-w-xl leading-relaxed'>
-              A curated collection of trails, recorded from Strava and
-              remembered in detail.
+              A curated collection of recorded trails and the details that make
+              each hike worth remembering.
             </p>
           </div>
         </div>
@@ -205,76 +210,75 @@ export default function ActivitiesIndex() {
               Editor's Desk
             </h2>
             <p className='text-sm text-[#5c554d] dark:text-[#b8ae9f] mb-5'>
-              Import new hikes from Strava to add them to the archive.
+              Upload a FitoTrack GPX export to add a new hike to the archive.
+              The original file is not stored—only the parsed route and stats.
             </p>
 
-            {!stravaConnected ? (
-              <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-t border-[#ddd5c9] dark:border-[#4a443e] pt-5'>
-                <p className='text-sm text-[#1a1816] dark:text-[#f5f1eb]'>
-                  Connect Strava to import new hikes.
-                </p>
-                <a
-                  href='/auth/strava'
-                  className='inline-flex items-center justify-center text-sm font-semibold uppercase tracking-wider bg-[#2d4a3e] hover:bg-[#1f352b] text-[#f5f1eb] px-5 py-2.5 transition-colors'
-                >
-                  Connect Strava
-                </a>
-              </div>
-            ) : (
-              <div className='space-y-3'>
-                {importable.length === 0 ? (
-                  <p className='text-sm text-[#5c554d] dark:text-[#b8ae9f] italic'>
-                    All Strava activities are imported.
-                  </p>
-                ) : (
-                  importable.map((activity: any) => {
-                    const isImporting = importingId === String(activity.id);
-                    return (
-                      <div
-                        key={activity.id}
-                        className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[#ddd5c9] dark:border-[#4a443e] pt-4 first:border-0 first:pt-0'
-                      >
-                        <div>
-                          <p className='font-medium text-[#1a1816] dark:text-[#f5f1eb]'>
-                            {activity.name}
-                          </p>
-                          <p className='text-sm text-[#5c554d] dark:text-[#b8ae9f]'>
-                            {new Date(activity.start_date).toLocaleDateString(
-                              'en-GB',
-                              {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              }
-                            )}
-                            {' · '}
-                            {formatDistance(activity.distance)}
-                            {' · '}
-                            {formatDuration(activity.moving_time)}
-                            {' · '}
-                            {activity.total_elevation_gain}m gain
-                          </p>
-                        </div>
-                        <Form method='post' className='flex-shrink-0'>
-                          <input
-                            type='hidden'
-                            name='stravaId'
-                            value={activity.id}
-                          />
-                          <button
-                            type='submit'
-                            disabled={!!isImporting}
-                            className='text-xs font-semibold uppercase tracking-wider bg-[#2d4a3e] hover:bg-[#1f352b] disabled:opacity-50 text-[#f5f1eb] px-4 py-2 transition-colors'
-                          >
-                            {isImporting ? 'Importing...' : 'Import'}
-                          </button>
-                        </Form>
-                      </div>
-                    );
-                  })
-                )}
+            {actionData && 'error' in actionData && (
+              <div
+                role='alert'
+                className='mb-4 border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-200 text-sm px-4 py-3'
+              >
+                {actionData.error}
               </div>
             )}
+
+            {actionData && 'duplicate' in actionData && actionData.duplicate && (
+              <div
+                role='status'
+                className='mb-4 border border-[#c4a13e]/40 bg-[#c4a13e]/10 text-[#1a1816] dark:text-[#f5f1eb] text-sm px-4 py-3'
+              >
+                <span className='font-medium'>{actionData.name}</span> is
+                already in the archive.{' '}
+                <Link
+                  to={`/activities/${actionData.existingActivityId}`}
+                  className='font-semibold text-[#2d4a3e] dark:text-[#a3c4b3] underline underline-offset-2'
+                >
+                  View this hike
+                </Link>
+              </div>
+            )}
+
+            <Form
+              method='post'
+              encType='multipart/form-data'
+              className='border-t border-[#ddd5c9] dark:border-[#4a443e] pt-5 space-y-4'
+            >
+              <div>
+                <label
+                  htmlFor='gpx-upload'
+                  className='block text-sm font-medium text-[#1a1816] dark:text-[#f5f1eb] mb-2'
+                >
+                  GPX file
+                </label>
+                <input
+                  ref={fileInputRef}
+                  id='gpx-upload'
+                  name='gpx'
+                  type='file'
+                  accept='.gpx,application/gpx+xml,application/octet-stream'
+                  required
+                  onChange={handleFileChange}
+                  className='block w-full text-sm text-[#1a1816] dark:text-[#f5f1eb] file:mr-4 file:py-2 file:px-4 file:border-0 file:text-xs file:font-semibold file:uppercase file:tracking-wider file:bg-[#2d4a3e] file:text-[#f5f1eb] hover:file:bg-[#1f352b] file:cursor-pointer'
+                />
+                <p className='mt-2 text-xs text-[#5c554d] dark:text-[#b8ae9f]'>
+                  Accepts `.gpx` exports from FitoTrack. Duplicate routes are
+                  detected automatically and will not be imported twice.
+                </p>
+                {selectedFileName && (
+                  <p className='mt-1 text-xs text-[#5c554d] dark:text-[#b8ae9f]'>
+                    Selected: {selectedFileName}
+                  </p>
+                )}
+              </div>
+              <button
+                type='submit'
+                disabled={isImporting}
+                className='inline-flex items-center justify-center text-sm font-semibold uppercase tracking-wider bg-[#2d4a3e] hover:bg-[#1f352b] disabled:opacity-50 text-[#f5f1eb] px-5 py-2.5 transition-colors'
+              >
+                {isImporting ? 'Importing…' : 'Import GPX'}
+              </button>
+            </Form>
           </div>
         </section>
       )}
@@ -328,7 +332,7 @@ export default function ActivitiesIndex() {
             </p>
             <p className='text-sm text-[#5c554d] dark:text-[#b8ae9f]'>
               {isOwner
-                ? 'Connect Strava and import your first hike to begin the archive.'
+                ? 'Upload your first FitoTrack GPX file to begin the archive.'
                 : 'The archive is empty. Check back soon.'}
             </p>
           </div>

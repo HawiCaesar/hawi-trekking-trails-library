@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -13,17 +10,10 @@ datasource db {
   provider = "postgresql"
 }
 
-model Settings {
-  id                 Int      @id @default(1)
-  stravaAccessToken  String?
-  stravaRefreshToken String?
-  stravaExpiresAt    Int?
-  updatedAt          DateTime @updatedAt
-}
-
 model Activity {
   id            String   @id @default(cuid())
-  stravaId      String   @unique
+  source        String   @default("strava")
+  sourceId      String
   name          String
   distance      Float
   movingTime    Int
@@ -33,15 +23,16 @@ model Activity {
   type          String
   gpsData       Json?
 
-  // Custom annotation fields
-  difficulty    String?
-  conditions    String?
-  weather       String?
-  notes         String?
-  rating        Int?
-  companions    String?
-  gear          String?
+  difficulty  String?
+  conditions  String?
+  weather     String?
+  notes       String?
+  rating      Int?
+  companions  String?
+  gear        String?
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([source, sourceId])
 }
